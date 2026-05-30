@@ -410,8 +410,9 @@ function AiChat(p){
   var loadingS=useState(false),loading=loadingS[0],setLoading=loadingS[1];
   var qS=useState(''),question=qS[0],setQuestion=qS[1];
   var voiceRef=useRef(null);var listeningS=useState(false),isListening=listeningS[0],setListening=listeningS[1];
-  var apiKeyS=useState(''),apiKey=apiKeyS[0],setApiKey=apiKeyS[1];
+  var apiKeyS=useState(function(){try{return localStorage.getItem('gc_api_key')||'';}catch(e){return '';}}),apiKey=apiKeyS[0],setApiKey=apiKeyS[1];
   var showKeyS=useState(false),showKey=showKeyS[0],setShowKey=showKeyS[1];
+  var rememberS=useState(function(){try{return !!localStorage.getItem('gc_api_key');}catch(e){return false;}}),remember=rememberS[0],setRemember=rememberS[1];
   var sysP='You are GUITAR COMPASS AI - expert guitar coach. Key: '+key+'. Style: '+style+'. Be concise. Plain text only, no markdown.';
   function startVoice(){if(isListening){if(voiceRef.current)voiceRef.current.abort();setListening(false);return;}var SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){setMessages(function(m){return m.concat([{role:'assistant',content:'Voice not supported.'}]);});return;}try{var r=new SR();voiceRef.current=r;r.lang=isFr?'fr-FR':'en-US';r.onresult=function(e){if(e.results&&e.results[0]&&e.results[0][0]){var t=e.results[0][0].transcript;setQuestion(t);setListening(false);setTimeout(function(){askQ(t);},300);}else setListening(false);};r.onerror=function(){setListening(false);};r.onend=function(){setListening(false);};setListening(true);setTimeout(function(){r.start();},100);}catch(ex){setListening(false);}}
   function askQ(q){
@@ -421,7 +422,7 @@ function AiChat(p){
     var isGroq=apiKey&&apiKey.startsWith('gsk_');
     var isOpenAI=apiKey&&apiKey.startsWith('sk-')&&!apiKey.startsWith('sk-ant-');
     if(isGroq){
-      fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify({model:'llama3-8b-8192',max_tokens:500,messages:[{role:'system',content:sysP}].concat(nm.map(function(m){return {role:m.role,content:m.content};}))})}).then(function(r){return r.json();}).then(function(d){if(d.error){setMessages(function(m){return m.concat([{role:'assistant',content:'Groq error: '+d.error.message}]);});setLoading(false);return;}setMessages(function(m){return m.concat([{role:'assistant',content:d.choices&&d.choices[0]?d.choices[0].message.content:'...'}]);});setLoading(false);}).catch(function(){setMessages(function(m){return m.concat([{role:'assistant',content:'Could not connect to Groq.'}]);});setLoading(false);});
+      fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:500,messages:[{role:'system',content:sysP}].concat(nm.map(function(m){return {role:m.role,content:m.content};}))})}).then(function(r){return r.json();}).then(function(d){if(d.error){setMessages(function(m){return m.concat([{role:'assistant',content:'Groq error: '+d.error.message}]);});setLoading(false);return;}setMessages(function(m){return m.concat([{role:'assistant',content:d.choices&&d.choices[0]?d.choices[0].message.content:'...'}]);});setLoading(false);}).catch(function(){setMessages(function(m){return m.concat([{role:'assistant',content:'Could not connect to Groq.'}]);});setLoading(false);});
     } else if(isOpenAI){
       fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify({model:'gpt-4o-mini',max_tokens:500,messages:[{role:'system',content:sysP}].concat(nm.map(function(m){return {role:m.role,content:m.content};}))})}).then(function(r){return r.json();}).then(function(d){if(d.error){setMessages(function(m){return m.concat([{role:'assistant',content:'OpenAI error: '+d.error.message}]);});setLoading(false);return;}setMessages(function(m){return m.concat([{role:'assistant',content:d.choices&&d.choices[0]?d.choices[0].message.content:'...'}]);});setLoading(false);}).catch(function(){setMessages(function(m){return m.concat([{role:'assistant',content:'Could not connect to OpenAI.'}]);});setLoading(false);});
     } else {
@@ -443,8 +444,20 @@ function AiChat(p){
       React.createElement('button',{onClick:function(){setShowKey(function(v){return !v;});},style:{background:'transparent',border:'none',color:'#555577',fontSize:'11px',cursor:'pointer',fontFamily:'Courier New,monospace',letterSpacing:'1px',display:'block',margin:'0 auto',marginBottom:'6px'}},showKey?'hide api key ▲':'⚙ api key (needed outside Claude.ai) ▼'),
       showKey?React.createElement('div',{style:{background:'#07071c',border:'1px solid #1a1a3a',borderRadius:'12px',padding:'12px'}},
         React.createElement('div',{style:{fontSize:'11px',color:'#F59E0B',marginBottom:'8px',lineHeight:1.6,fontFamily:'Courier New,monospace',fontWeight:700}},'Paste your Groq key (gsk_... — free!) or Anthropic (sk-ant-...) or OpenAI (sk-...) key.'),
-        React.createElement('input',{type:'password',value:apiKey,onChange:function(e){setApiKey(e.target.value);},placeholder:'gsk_... or sk-ant-... or sk-...',style:{width:'100%',boxSizing:'border-box',background:'#0a0a1e',border:'1.5px solid '+(apiKey?'#34D399':'#1a1a3a'),color:'#e0e4f0',borderRadius:'8px',padding:'10px 12px',fontFamily:'Courier New,monospace',fontSize:'12px',outline:'none',marginBottom:'6px'}}),
-        apiKey?React.createElement('div',{style:{fontSize:'11px',color:'#34D399',fontFamily:'Courier New,monospace',fontWeight:700}},apiKey.startsWith('gsk_')?'✓ Groq key ready (free)':apiKey.startsWith('sk-ant-')?'✓ Anthropic key ready':apiKey.startsWith('sk-')?'✓ OpenAI key ready':'⚠ Unrecognized format'):null
+        React.createElement('input',{type:'password',value:apiKey,onChange:function(e){
+          setApiKey(e.target.value);
+          if(remember){try{if(e.target.value){localStorage.setItem('gc_api_key',e.target.value);}else{localStorage.removeItem('gc_api_key');}}catch(ex){}}
+        },placeholder:'gsk_... or sk-ant-... or sk-...',style:{width:'100%',boxSizing:'border-box',background:'#0a0a1e',border:'1.5px solid '+(apiKey?'#34D399':'#1a1a3a'),color:'#e0e4f0',borderRadius:'8px',padding:'10px 12px',fontFamily:'Courier New,monospace',fontSize:'12px',outline:'none',marginBottom:'6px'}}),
+        React.createElement('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'4px'}},
+          apiKey?React.createElement('div',{style:{fontSize:'11px',color:'#34D399',fontFamily:'Courier New,monospace',fontWeight:700}},apiKey.startsWith('gsk_')?'✓ Groq key ready (free)':apiKey.startsWith('sk-ant-')?'✓ Anthropic key ready':apiKey.startsWith('sk-')?'✓ OpenAI key ready':'⚠ Unrecognized format'):React.createElement('div',null),
+          React.createElement('label',{style:{display:'flex',alignItems:'center',gap:'6px',cursor:'pointer',fontSize:'11px',color:remember?'#34D399':'#9090c8',fontFamily:'Courier New,monospace'}},
+            React.createElement('input',{type:'checkbox',checked:remember,onChange:function(e){
+              setRemember(e.target.checked);
+              try{if(e.target.checked&&apiKey){localStorage.setItem('gc_api_key',apiKey);}else{localStorage.removeItem('gc_api_key');}}catch(ex){}
+            },style:{accentColor:'#34D399'}}),
+            'Remember on this device'
+          )
+        )
       ):null
     )
   );
