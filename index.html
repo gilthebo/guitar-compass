@@ -418,8 +418,11 @@ function AiChat(p){
     var text=q||question;if(!text||!text.trim()||loading)return;
     var nm=messages.concat([{role:'user',content:text}]);
     setMessages(nm);setQuestion('');setLoading(true);
+    var isGroq=apiKey&&apiKey.startsWith('gsk_');
     var isOpenAI=apiKey&&apiKey.startsWith('sk-')&&!apiKey.startsWith('sk-ant-');
-    if(isOpenAI){
+    if(isGroq){
+      fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify({model:'llama3-8b-8192',max_tokens:500,messages:[{role:'system',content:sysP}].concat(nm.map(function(m){return {role:m.role,content:m.content};}))})}).then(function(r){return r.json();}).then(function(d){if(d.error){setMessages(function(m){return m.concat([{role:'assistant',content:'Groq error: '+d.error.message}]);});setLoading(false);return;}setMessages(function(m){return m.concat([{role:'assistant',content:d.choices&&d.choices[0]?d.choices[0].message.content:'...'}]);});setLoading(false);}).catch(function(){setMessages(function(m){return m.concat([{role:'assistant',content:'Could not connect to Groq.'}]);});setLoading(false);});
+    } else if(isOpenAI){
       fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify({model:'gpt-4o-mini',max_tokens:500,messages:[{role:'system',content:sysP}].concat(nm.map(function(m){return {role:m.role,content:m.content};}))})}).then(function(r){return r.json();}).then(function(d){if(d.error){setMessages(function(m){return m.concat([{role:'assistant',content:'OpenAI error: '+d.error.message}]);});setLoading(false);return;}setMessages(function(m){return m.concat([{role:'assistant',content:d.choices&&d.choices[0]?d.choices[0].message.content:'...'}]);});setLoading(false);}).catch(function(){setMessages(function(m){return m.concat([{role:'assistant',content:'Could not connect to OpenAI.'}]);});setLoading(false);});
     } else {
       var headers={'Content-Type':'application/json','anthropic-dangerous-direct-browser-access':'true'};
@@ -439,9 +442,9 @@ function AiChat(p){
     React.createElement('div',{style:{borderTop:'1px solid #1a1a3a',paddingTop:'10px'}},
       React.createElement('button',{onClick:function(){setShowKey(function(v){return !v;});},style:{background:'transparent',border:'none',color:'#555577',fontSize:'11px',cursor:'pointer',fontFamily:'Courier New,monospace',letterSpacing:'1px',display:'block',margin:'0 auto',marginBottom:'6px'}},showKey?'hide api key ▲':'⚙ api key (needed outside Claude.ai) ▼'),
       showKey?React.createElement('div',{style:{background:'#07071c',border:'1px solid #1a1a3a',borderRadius:'12px',padding:'12px'}},
-        React.createElement('div',{style:{fontSize:'11px',color:'#F59E0B',marginBottom:'8px',lineHeight:1.6,fontFamily:'Courier New,monospace',fontWeight:700}},'Required to use AI on Weebly or any external site. Paste your Anthropic key (sk-ant-...) or OpenAI key (sk-...).'),
-        React.createElement('input',{type:'password',value:apiKey,onChange:function(e){setApiKey(e.target.value);},placeholder:'sk-ant-... or sk-...',style:{width:'100%',boxSizing:'border-box',background:'#0a0a1e',border:'1.5px solid '+(apiKey?'#34D399':'#1a1a3a'),color:'#e0e4f0',borderRadius:'8px',padding:'10px 12px',fontFamily:'Courier New,monospace',fontSize:'12px',outline:'none',marginBottom:'6px'}}),
-        apiKey?React.createElement('div',{style:{fontSize:'11px',color:'#34D399',fontFamily:'Courier New,monospace',fontWeight:700}},apiKey.startsWith('sk-ant-')?'✓ Anthropic key ready':apiKey.startsWith('sk-')?'✓ OpenAI key ready':'⚠ Unrecognized format'):null
+        React.createElement('div',{style:{fontSize:'11px',color:'#F59E0B',marginBottom:'8px',lineHeight:1.6,fontFamily:'Courier New,monospace',fontWeight:700}},'Paste your Groq key (gsk_... — free!) or Anthropic (sk-ant-...) or OpenAI (sk-...) key.'),
+        React.createElement('input',{type:'password',value:apiKey,onChange:function(e){setApiKey(e.target.value);},placeholder:'gsk_... or sk-ant-... or sk-...',style:{width:'100%',boxSizing:'border-box',background:'#0a0a1e',border:'1.5px solid '+(apiKey?'#34D399':'#1a1a3a'),color:'#e0e4f0',borderRadius:'8px',padding:'10px 12px',fontFamily:'Courier New,monospace',fontSize:'12px',outline:'none',marginBottom:'6px'}}),
+        apiKey?React.createElement('div',{style:{fontSize:'11px',color:'#34D399',fontFamily:'Courier New,monospace',fontWeight:700}},apiKey.startsWith('gsk_')?'✓ Groq key ready (free)':apiKey.startsWith('sk-ant-')?'✓ Anthropic key ready':apiKey.startsWith('sk-')?'✓ OpenAI key ready':'⚠ Unrecognized format'):null
       ):null
     )
   );
